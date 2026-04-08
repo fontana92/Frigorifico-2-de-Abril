@@ -88,11 +88,15 @@
         
         .badge-offer { position: absolute; top: 15px; left: 15px; background: #ff4757; color: white; padding: 5px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 800; z-index: 10; }
         
+        .share-btn-card { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.8); width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary-dark); z-index: 10; transition: 0.3s; border: 1px solid #eee; }
+        .share-btn-card:hover { background: var(--primary); color: white; }
+
         .product-img-container { width: 100%; height: 220px; border-radius: 18px; margin-bottom: 15px; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center; }
         .product-img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
         .product-card:hover .product-img { transform: scale(1.1); }
         
         .price { font-size: 1.6rem; font-weight: 800; color: var(--primary-dark); letter-spacing: -1px; }
+        .old-price { font-size: 0.9rem; color: #999; text-decoration: line-through; margin-right: 8px; font-weight: 400; }
         .unit { font-size: 0.8rem; color: #777; font-weight: 400; }
         .btn-add { background: var(--primary-dark); color: white; border: none; width: 45px; height: 45px; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.3s; }
         .btn-add:hover { background: var(--primary); transform: rotate(90deg); }
@@ -100,6 +104,16 @@
         /* CARRITO SIDEBAR */
         .cart-sidebar { position: fixed; top: 0; right: -100%; width: 100%; max-width: 420px; height: 100vh; background: white; z-index: 3000; transition: 0.5s; padding: 40px 30px; box-shadow: -20px 0 50px rgba(0,0,0,0.15); display: flex; flex-direction: column; border-left: 5px solid var(--primary-dark); }
         .cart-sidebar.active { right: 0; }
+
+        /* MODAL DETALLE */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 4000; padding: 20px; backdrop-filter: blur(5px); }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 40px; border-radius: 30px; text-align: left; max-width: 800px; width: 100%; position: relative; max-height: 90vh; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .close-modal { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #999; }
+        
+        @media (max-width: 600px) {
+            .modal-content { grid-template-columns: 1fr; padding: 25px; }
+        }
 
         /* FOOTER */
         footer { background: var(--primary-dark); color: white; padding: 80px 20px 40px; text-align: center; }
@@ -191,6 +205,19 @@
         </div>
     </section>
 
+    <!-- VENTANA DETALLE PRODUCTO -->
+    <div id="detail-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeDetail()">&times;</span>
+            <div id="modal-img-container" class="product-img-container" style="height: auto; max-height: 400px;">
+                <!-- Imagen dinámica -->
+            </div>
+            <div id="modal-info">
+                <!-- Info dinámica -->
+            </div>
+        </div>
+    </div>
+
     <div class="cart-sidebar" id="cart-sidebar">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
             <h2 style="font-weight: 800; color: var(--primary-dark);">Tu Pedido</h2>
@@ -210,7 +237,7 @@
     <a href="https://wa.me/5491168705261" class="wa-float" target="_blank"><i class="fab fa-whatsapp"></i></a>
 
     <footer>
-        <img src="https://i.postimg.cc/zX76L7Zp/Whats-App-Image-2024-04-06-at-16-09-18.jpg" class="footer-logo">
+        <img src="https://i.postimg.cc/85vfpN2Z/IMG-20260406-WA0004.jpg" class="footer-logo">
         <div class="social-icons-footer">
             <a href="https://instagram.com" target="_blank"><i class="fab fa-instagram"></i></a>
             <a href="https://wa.me/5491168705261" target="_blank"><i class="fab fa-whatsapp"></i></a>
@@ -230,24 +257,30 @@
                 const text = await res.text();
                 const rows = text.split('\n').map(r => r.split(','));
 
-                // Ajustamos el mapeo según tu imagen de Sheets
                 products = rows.slice(1).map(c => {
                     if(c.length < 8) return null;
+                    const precioActual = parseFloat(c[3]) || 0;
+                    const descPorcentaje = parseFloat(c[10]) || 0; // Columna K
+                    const precioAnterior = descPorcentaje > 0 ? Math.round(precioActual / (1 - (descPorcentaje / 100))) : 0;
+
                     return {
                         id: c[0].trim(),
                         nombre: c[1].trim(),
                         categoria: c[2].trim() || 'Otros',
-                        precio: parseFloat(c[3]) || 0,
+                        precio: precioActual,
+                        precioAnterior: precioAnterior,
+                        descuento: descPorcentaje,
                         unidad: c[5] ? c[5].trim() : 'KG',
                         oferta: c[6] ? c[6].trim().toUpperCase() === 'S' : false,
                         web: c[7] ? c[7].trim().toUpperCase() : 'N',
-                        foto: c[8] ? c[8].trim() : '' // Columna I
+                        foto: c[8] ? c[8].trim() : '',
+                        descripcion: c[9] ? c[9].trim() : 'Corte de carne seleccionado de primera calidad.' // Columna J
                     };
-                }).filter(p => p !== null && p.web === 'S'); // Solo mostramos los que tienen 'S' en columna Web
+                }).filter(p => p !== null && p.web === 'S');
 
                 renderCats();
                 renderProds();
-            } catch (e) { console.error("Error cargando datos", e); }
+            } catch (e) { console.error("Error", e); }
         }
 
         function renderCats() {
@@ -266,25 +299,59 @@
                 return (currentCat === 'Todos' || p.categoria === currentCat) && p.nombre.toLowerCase().includes(query);
             });
 
-            if(filtered.length === 0) {
-                grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; padding:40px;">No se encontraron cortes que coincidan.</p>';
-                return;
-            }
-
             grid.innerHTML = filtered.map(p => `
-                <div class="product-card" onclick="addToCart('${p.id}')">
+                <div class="product-card" onclick="openDetail('${p.id}')">
                     ${p.oferta ? '<div class="badge-offer">OFERTA</div>' : ''}
+                    <button class="share-btn-card" onclick="shareProduct(event, '${p.id}')"><i class="fas fa-share-alt"></i></button>
                     <div class="product-img-container">
                         <img src="${p.foto || 'https://images.unsplash.com/photo-1607623814075-e512199b008d?q=80&w=500'}" class="product-img" loading="lazy">
                     </div>
                     <small style="color:var(--primary); font-weight:700; font-size:0.7rem; text-transform:uppercase;">${p.categoria}</small>
                     <h3 style="margin:5px 0 15px; color:var(--primary-dark); font-size:1rem; flex-grow:1;">${p.nombre}</h3>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:auto;">
-                        <span class="price">$${p.precio.toLocaleString()} <small class="unit">/${p.unidad}</small></span>
-                        <button class="btn-add"><i class="fas fa-plus"></i></button>
+                        <div>
+                            ${p.precioAnterior > 0 ? `<span class="old-price">$${p.precioAnterior.toLocaleString()}</span>` : ''}
+                            <span class="price">$${p.precio.toLocaleString()} <small class="unit">/${p.unidad}</small></span>
+                        </div>
+                        <button class="btn-add" onclick="event.stopPropagation(); addToCart('${p.id}')"><i class="fas fa-plus"></i></button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        function openDetail(id) {
+            const p = products.find(i => i.id === id);
+            if(!p) return;
+
+            document.getElementById('modal-img-container').innerHTML = `<img src="${p.foto || 'https://images.unsplash.com/photo-1607623814075-e512199b008d?q=80&w=500'}" style="width:100%; height:100%; object-fit:cover; border-radius:20px;">`;
+            
+            document.getElementById('modal-info').innerHTML = `
+                <small style="color:var(--primary); font-weight:700; text-transform:uppercase;">${p.categoria}</small>
+                <h2 style="color:var(--primary-dark); margin:10px 0;">${p.nombre}</h2>
+                <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">${p.descripcion}</p>
+                <div style="margin-bottom:25px;">
+                    ${p.precioAnterior > 0 ? `<span class="old-price" style="font-size:1.1rem;">$${p.precioAnterior.toLocaleString()}</span> <span style="color:#ff4757; font-weight:800;">${p.descuento}% OFF</span><br>` : ''}
+                    <span class="price" style="font-size:2.5rem;">$${p.precio.toLocaleString()}</span><small class="unit">/${p.unidad}</small>
+                </div>
+                <button class="btn-hero" style="width:100%; border:none; padding:15px;" onclick="addToCart('${p.id}'); closeDetail();">AÑADIR AL PEDIDO</button>
+            `;
+            
+            document.getElementById('detail-modal').style.display = 'flex';
+        }
+
+        function closeDetail() { document.getElementById('detail-modal').style.display = 'none'; }
+
+        function shareProduct(e, id) {
+            e.stopPropagation();
+            const p = products.find(i => i.id === id);
+            const text = `¡Mirá este producto en Frigorífico 2 de Abril!\n\n🥩 *${p.nombre}*\n💰 Precio: $${p.precio.toLocaleString()} /${p.unidad}\n\nLink: ${window.location.href}`;
+            
+            if (navigator.share) {
+                navigator.share({ title: p.nombre, text: text, url: window.location.href });
+            } else {
+                navigator.clipboard.writeText(text);
+                alert("Link copiado al portapapeles");
+            }
         }
 
         function addToCart(id) {
@@ -316,12 +383,10 @@
 
         function sendOrder() {
             const name = document.getElementById('cust-name').value.trim();
-            if(!name) return alert("Por favor, ingresá tu nombre para procesar el pedido.");
-            if(cart.length === 0) return alert("Tu carrito está vacío.");
-            
+            if(!name) return alert("Por favor, ingresá tu nombre.");
             let msg = `*NUEVO PEDIDO - FRIGORÍFICO 2 DE ABRIL*%0A---------------------------%0A👤 Cliente: ${name}%0A%0A📦 DETALLE:%0A`;
             cart.forEach(i => msg += `• ${i.nombre} (x${i.qty} ${i.unidad})%0A`);
-            msg += `%0A💰 *TOTAL: ${document.getElementById('total-price').innerText}*%0A---------------------------%0A_Enviado desde el sitio oficial._`;
+            msg += `%0A💰 *TOTAL: ${document.getElementById('total-price').innerText}*`;
             window.open(`https://wa.me/5491168705261?text=${msg}`, '_blank');
         }
 
