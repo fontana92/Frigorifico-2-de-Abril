@@ -352,6 +352,7 @@
     <script>
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIyPiXq5gHgPv-prd8-wiZGPXo-2bhTMNL2UNWcU3BXFBhJKExkhk6Z8mDjv72IGxmk8982bn5ZokO/pub?gid=0&single=true&output=csv";
         let products = [], cart = [], currentCat = 'Todos';
+        let allCategories = []; // Guardamos todas las categorías de la hoja
 
         async function syncData() {
             try {
@@ -359,17 +360,27 @@
                 const text = await res.text();
                 const rows = text.split('\n').map(r => r.split(','));
 
+                // Primero, extraemos TODAS las categorías de la hoja (columna C - índice 2)
+                // y también las guardamos para mostrarlas en el menú
+                const categoriasFromSheet = new Set();
+                
                 products = rows.slice(1).map(c => {
                     if(c.length < 8) return null;
                     const precioActual = parseFloat(c[3]) || 0;
                     const descPorcentaje = parseFloat(c[10]) || 0;
                     const precioAnterior = descPorcentaje > 0 ? Math.round(precioActual / (1 - (descPorcentaje / 100))) : 0;
+                    
+                    // Guardamos la categoría de la columna C (índice 2)
+                    const categoria = c[2] ? c[2].trim() : 'Otros';
+                    if (categoria) categoriasFromSheet.add(categoria);
 
                     return {
                         id: c[0].trim(),
                         nombre: c[1].trim(),
-                        // ⬇️ CATEGORÍA DESDE LA COLUMNA L (índice 11)
-                        categoria: c[11] ? c[11].trim() : 'Otros',
+                        // CATEGORÍA DESDE LA COLUMNA L (índice 11) para mayorista
+                        categoriaMayorista: c[11] ? c[11].trim() : '',
+                        // Guardamos también la categoría original (columna C)
+                        rubro: categoria,
                         precio: precioActual,
                         precioAnterior: precioAnterior,
                         descuento: descPorcentaje,
@@ -380,6 +391,9 @@
                         descripcion: c[9] ? c[9].trim() : 'Corte seleccionado de primera calidad.'
                     };
                 }).filter(p => p !== null && p.web === 'S');
+
+                // Guardamos todas las categorías para el menú
+                allCategories = ['Todos', 'Mayorista', ...Array.from(categoriasFromSheet).filter(cat => cat.toLowerCase() !== 'mayorista')];
 
                 renderCats();
                 renderProds();
@@ -394,15 +408,7 @@
         }
 
         function renderCats() {
-            // Obtener todas las categorías de los productos (excepto "mayorista" para evitar duplicado)
-            const categoriasFromData = [...new Set(products.map(p => p.categoria))]
-                .filter(cat => cat.toLowerCase() !== 'mayorista');
-            
-            // Construir el array final: primero "Todos", luego "Mayorista" (destacado), luego las demás
-            const categories = ['Todos', 'Mayorista', ...categoriasFromData];
-            
-            document.getElementById('cat-container').innerHTML = categories.map(r => {
-                // Si es "Mayorista", le agregamos la clase especial
+            document.getElementById('cat-container').innerHTML = allCategories.map(r => {
                 const isMayorista = r === 'Mayorista';
                 return `<button class="cat-btn ${currentCat === r ? 'active' : ''} ${isMayorista ? 'cat-btn-mayorista' : ''}" onclick="filter('${r}')">${r.toUpperCase()}</button>`;
             }).join('');
@@ -426,7 +432,7 @@
                 mayoristaContainer.classList.add('active');
 
                 const mayoristaProds = products.filter(p => 
-                    p.categoria.toLowerCase() === 'mayorista' && 
+                    p.categoriaMayorista.toLowerCase() === 'mayorista' && 
                     p.nombre.toLowerCase().includes(query)
                 );
 
@@ -474,10 +480,12 @@
             grid.style.display = 'grid';
             mayoristaContainer.classList.remove('active');
 
-            const filtered = products.filter(p => 
-                (currentCat === 'Todos' || p.categoria === currentCat) && 
-                p.nombre.toLowerCase().includes(query)
-            );
+            const filtered = products.filter(p => {
+                // Si es "Todos", mostrar todos
+                if (currentCat === 'Todos') return p.nombre.toLowerCase().includes(query);
+                // Si no, filtrar por rubro (columna C)
+                return p.rubro === currentCat && p.nombre.toLowerCase().includes(query);
+            });
 
             grid.innerHTML = filtered.map(p => `
                 <div class="product-card" onclick="openDetail('${p.id}')">
@@ -486,7 +494,7 @@
                     <div class="product-img-container">
                         <img src="${p.foto || 'https://images.unsplash.com/photo-1607623814075-e512199b008d?q=80&w=500'}" class="product-img" loading="lazy">
                     </div>
-                    <small style="color:var(--primary); font-weight:700; font-size:0.7rem; text-transform:uppercase;">${p.categoria}</small>
+                    <small style="color:var(--primary); font-weight:700; font-size:0.7rem; text-transform:uppercase;">${p.rubro}</small>
                     <h3 style="margin:5px 0 15px; color:var(--primary-dark); font-size:1rem; flex-grow:1;">${p.nombre}</h3>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:auto;">
                         <div>
@@ -504,7 +512,7 @@
             if(!p) return;
             document.getElementById('modal-img-container').innerHTML = `<img src="${p.foto || 'https://images.unsplash.com/photo-1607623814075-e512199b008d?q=80&w=500'}" style="width:100%; height:100%; object-fit:cover; border-radius:20px;">`;
             document.getElementById('modal-info').innerHTML = `
-                <small style="color:var(--primary); font-weight:700; text-transform:uppercase;">${p.categoria}</small>
+                <small style="color:var(--primary); font-weight:700; text-transform:uppercase;">${p.rubro}</small>
                 <h2 style="color:var(--primary-dark); margin:10px 0;">${p.nombre}</h2>
                 <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">${p.descripcion}</p>
                 <div style="margin-bottom:25px;">
