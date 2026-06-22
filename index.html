@@ -20,6 +20,8 @@
             --light: #f8fafc;
             --white: #ffffff;
             --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            --mayorista-color: #FF6B00;
+            --mayorista-glow: rgba(255, 107, 0, 0.3);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
@@ -57,8 +59,47 @@
         .search-input { width: 100%; padding: 20px 30px; border-radius: 50px; border: 2px solid #eee; outline: none; font-size: 1rem; }
 
         .categories { display: flex; justify-content: center; gap: 10px; margin-bottom: 40px; flex-wrap: wrap; }
-        .cat-btn { padding: 12px 25px; border-radius: 50px; border: 2px solid var(--primary-dark); cursor: pointer; font-weight: 700; color: var(--primary-dark); transition: var(--transition); font-size: 0.75rem; }
+        .cat-btn { 
+            padding: 12px 25px; 
+            border-radius: 50px; 
+            border: 2px solid var(--primary-dark); 
+            cursor: pointer; 
+            font-weight: 700; 
+            color: var(--primary-dark); 
+            transition: var(--transition); 
+            font-size: 0.75rem;
+            background: transparent;
+            position: relative;
+        }
         .cat-btn.active { background: var(--primary-dark); color: white; }
+        .cat-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+        /* ESTILO ESPECIAL PARA EL BOTÓN MAYORISTA */
+        .cat-btn-mayorista {
+            border: 3px solid var(--mayorista-color) !important;
+            color: var(--mayorista-color) !important;
+            font-weight: 800 !important;
+            font-size: 0.85rem !important;
+            padding: 12px 30px !important;
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.05), rgba(255, 107, 0, 0.1)) !important;
+            box-shadow: 0 0 20px rgba(255, 107, 0, 0.1) !important;
+            animation: pulse-mayorista 2s ease-in-out infinite;
+        }
+        .cat-btn-mayorista::before {
+            content: "⚡ ";
+            font-size: 1rem;
+        }
+        .cat-btn-mayorista.active {
+            background: var(--mayorista-color) !important;
+            color: white !important;
+            border-color: var(--mayorista-color) !important;
+            box-shadow: 0 0 30px rgba(255, 107, 0, 0.4) !important;
+            transform: scale(1.05);
+        }
+        @keyframes pulse-mayorista {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 107, 0, 0.1); }
+            50% { box-shadow: 0 0 35px rgba(255, 107, 0, 0.25); }
+        }
 
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
         .product-card { border: 1px solid #eee; border-radius: 24px; padding: 20px; transition: var(--transition); background: white; cursor: pointer; position: relative; display: flex; flex-direction: column; }
@@ -111,7 +152,7 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.06);
         }
         .mayorista-table th {
-            background: var(--primary-dark);
+            background: var(--mayorista-color);
             color: white;
             padding: 16px 20px;
             text-align: left;
@@ -137,7 +178,7 @@
         }
         .mayorista-price {
             font-weight: 700;
-            color: var(--primary-dark);
+            color: var(--mayorista-color);
             font-size: 1rem;
         }
         .mayorista-code {
@@ -152,7 +193,7 @@
             font-size: 1.1rem;
         }
         .btn-add-mayorista {
-            background: var(--primary-dark);
+            background: var(--mayorista-color);
             color: white;
             border: none;
             width: 32px;
@@ -168,14 +209,25 @@
             font-size: 0.9rem;
         }
         .btn-add-mayorista:hover {
-            background: var(--primary);
+            background: #e55a00;
             transform: scale(1.1);
         }
         .mayorista-row-click {
             cursor: pointer;
         }
         .mayorista-row-click:hover td {
-            background: #f0f7ff;
+            background: #fff5ed;
+        }
+
+        /* TÍTULO DE LA SECCIÓN MAYORISTA DESTACADO */
+        .mayorista-title {
+            color: var(--mayorista-color) !important;
+            border-left: 5px solid var(--mayorista-color);
+            padding-left: 15px;
+            animation: pulse-mayorista 2s ease-in-out infinite;
+        }
+        .mayorista-title i {
+            color: var(--mayorista-color);
         }
 
         @media (max-width: 768px) {
@@ -193,6 +245,10 @@
                 width: 28px;
                 height: 28px;
                 font-size: 0.8rem;
+            }
+            .cat-btn-mayorista {
+                font-size: 0.75rem !important;
+                padding: 10px 20px !important;
             }
         }
     </style>
@@ -251,8 +307,8 @@
 
         <!-- VISTA DE LISTA PARA MAYORISTA -->
         <div class="mayorista-list-container" id="mayorista-list-container">
-            <h3 style="color: var(--primary-dark); margin-bottom: 20px; font-size: 1.5rem;">
-                <i class="fas fa-wholesale" style="color: var(--primary);"></i> Lista Mayorista
+            <h3 class="mayorista-title" style="margin-bottom: 20px; font-size: 1.5rem;">
+                <i class="fas fa-wholesale"></i> Lista Mayorista
             </h3>
             <div id="mayorista-list"></div>
         </div>
@@ -312,7 +368,8 @@
                     return {
                         id: c[0].trim(),
                         nombre: c[1].trim(),
-                        categoria: c[2].trim() || 'Otros',
+                        // ⬇️ CATEGORÍA DESDE LA COLUMNA L (índice 11)
+                        categoria: c[11] ? c[11].trim() : 'Otros',
                         precio: precioActual,
                         precioAnterior: precioAnterior,
                         descuento: descPorcentaje,
@@ -339,9 +396,11 @@
         function renderCats() {
             const categories = ['Todos', 'Mayorista', ...new Set(products.map(p => p.categoria))];
             
-            document.getElementById('cat-container').innerHTML = categories.map(r => `
-                <button class="cat-btn ${currentCat === r ? 'active' : ''}" onclick="filter('${r}')">${r.toUpperCase()}</button>
-            `).join('');
+            document.getElementById('cat-container').innerHTML = categories.map(r => {
+                // Si es "Mayorista", le agregamos la clase especial
+                const isMayorista = r === 'Mayorista';
+                return `<button class="cat-btn ${currentCat === r ? 'active' : ''} ${isMayorista ? 'cat-btn-mayorista' : ''}" onclick="filter('${r}')">${r.toUpperCase()}</button>`;
+            }).join('');
         }
 
         function filter(c) { 
