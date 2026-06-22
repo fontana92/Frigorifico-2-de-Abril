@@ -66,7 +66,6 @@
         
         .badge-offer { position: absolute; top: 15px; left: 15px; background: #ff4757; color: white; padding: 5px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 800; z-index: 10; }
         
-        /* LOGO DESCUENTO PORCENTAJE */
         .badge-percent { position: absolute; top: 15px; left: 15px; background: var(--accent); color: var(--primary-dark); width: 50px; height: 50px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 900; z-index: 11; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid white; line-height: 1; }
         .badge-percent span { font-size: 0.9rem; }
 
@@ -79,6 +78,7 @@
         .old-price { font-size: 0.9rem; color: #999; text-decoration: line-through; margin-right: 8px; font-weight: 400; }
         .unit { font-size: 0.8rem; color: #777; font-weight: 400; }
         .btn-add { background: var(--primary-dark); color: white; border: none; width: 45px; height: 45px; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        .btn-add:hover { background: var(--primary); transform: scale(1.05); }
 
         .cart-sidebar { position: fixed; top: 0; right: -100%; width: 100%; max-width: 420px; height: 100vh; background: white; z-index: 3000; transition: 0.5s; padding: 40px 30px; box-shadow: -20px 0 50px rgba(0,0,0,0.15); display: flex; flex-direction: column; border-left: 5px solid var(--primary-dark); }
         .cart-sidebar.active { right: 0; }
@@ -94,9 +94,106 @@
 
         .wa-float { position: fixed; bottom: 30px; right: 30px; background: #25d366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; z-index: 1500; box-shadow: 0 10px 25px rgba(37,211,102,0.3); text-decoration: none; }
 
+        /* ESTILOS PARA LA VISTA LISTA DE MAYORISTA */
+        .mayorista-list-container {
+            display: none;
+            margin-top: 30px;
+        }
+        .mayorista-list-container.active {
+            display: block;
+        }
+        .mayorista-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
+        .mayorista-table th {
+            background: var(--primary-dark);
+            color: white;
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .mayorista-table th:last-child {
+            text-align: center;
+            width: 60px;
+        }
+        .mayorista-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+        }
+        .mayorista-table tr:hover td {
+            background: #f8fafc;
+        }
+        .mayorista-table tr:last-child td {
+            border-bottom: none;
+        }
+        .mayorista-price {
+            font-weight: 700;
+            color: var(--primary-dark);
+            font-size: 1rem;
+        }
+        .mayorista-code {
+            font-weight: 600;
+            color: #666;
+            font-size: 0.8rem;
+        }
+        .mayorista-empty {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.1rem;
+        }
+        .btn-add-mayorista {
+            background: var(--primary-dark);
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            font-size: 0.9rem;
+        }
+        .btn-add-mayorista:hover {
+            background: var(--primary);
+            transform: scale(1.1);
+        }
+        .mayorista-row-click {
+            cursor: pointer;
+        }
+        .mayorista-row-click:hover td {
+            background: #f0f7ff;
+        }
+
         @media (max-width: 768px) {
             .nav-menu { display: none; }
             .modal-content { grid-template-columns: 1fr; padding: 25px; }
+            .mayorista-table th,
+            .mayorista-table td {
+                padding: 10px 12px;
+                font-size: 0.75rem;
+            }
+            .mayorista-table th:last-child {
+                width: 40px;
+            }
+            .btn-add-mayorista {
+                width: 28px;
+                height: 28px;
+                font-size: 0.8rem;
+            }
         }
     </style>
 </head>
@@ -146,8 +243,18 @@
             <input type="text" id="search" class="search-input" placeholder="¿Qué corte estás buscando?" oninput="renderProds()">
         </div>
         <div class="categories" id="cat-container"></div>
+        
+        <!-- VISTA DE GRID (productos normales) -->
         <div class="products-grid" id="prod-grid">
             <p style="text-align:center; grid-column:1/-1; color:#999;">Sincronizando stock...</p>
+        </div>
+
+        <!-- VISTA DE LISTA PARA MAYORISTA -->
+        <div class="mayorista-list-container" id="mayorista-list-container">
+            <h3 style="color: var(--primary-dark); margin-bottom: 20px; font-size: 1.5rem;">
+                <i class="fas fa-wholesale" style="color: var(--primary);"></i> Lista Mayorista
+            </h3>
+            <div id="mayorista-list"></div>
         </div>
     </section>
 
@@ -220,7 +327,6 @@
                 renderCats();
                 renderProds();
 
-                // DETECTAR SI VIENE UN ID POR LA URL PARA ABRIRLO
                 const urlParams = new URLSearchParams(window.location.search);
                 const prodId = urlParams.get('id');
                 if (prodId) {
@@ -231,18 +337,83 @@
         }
 
         function renderCats() {
-            const rubros = ['Todos', ...new Set(products.map(p => p.categoria))];
-            document.getElementById('cat-container').innerHTML = rubros.map(r => `
+            const categories = ['Todos', 'Mayorista', ...new Set(products.map(p => p.categoria))];
+            
+            document.getElementById('cat-container').innerHTML = categories.map(r => `
                 <button class="cat-btn ${currentCat === r ? 'active' : ''}" onclick="filter('${r}')">${r.toUpperCase()}</button>
             `).join('');
         }
 
-        function filter(c) { currentCat = c; renderCats(); renderProds(); }
+        function filter(c) { 
+            currentCat = c; 
+            renderCats(); 
+            renderProds(); 
+        }
 
         function renderProds() {
             const query = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('prod-grid');
-            const filtered = products.filter(p => (currentCat === 'Todos' || p.categoria === currentCat) && p.nombre.toLowerCase().includes(query));
+            const mayoristaContainer = document.getElementById('mayorista-list-container');
+            const mayoristaList = document.getElementById('mayorista-list');
+
+            // Si la categoría seleccionada es "Mayorista"
+            if (currentCat === 'Mayorista') {
+                grid.style.display = 'none';
+                mayoristaContainer.classList.add('active');
+
+                const mayoristaProds = products.filter(p => 
+                    p.categoria.toLowerCase() === 'mayorista' && 
+                    p.nombre.toLowerCase().includes(query)
+                );
+
+                if (mayoristaProds.length === 0) {
+                    mayoristaList.innerHTML = `<div class="mayorista-empty">No hay productos en la categoría Mayorista</div>`;
+                } else {
+                    let html = `
+                        <table class="mayorista-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Descripción</th>
+                                    <th style="text-align: right;">Precio</th>
+                                    <th style="text-align: center;">+</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    mayoristaProds.forEach(p => {
+                        html += `
+                            <tr>
+                                <td class="mayorista-code">${p.id}</td>
+                                <td class="mayorista-row-click" onclick="openDetail('${p.id}')">${p.nombre}</td>
+                                <td style="text-align: right;">
+                                    <span class="mayorista-price">$${p.precio.toLocaleString()}</span>
+                                    <small class="unit">/${p.unidad}</small>
+                                </td>
+                                <td style="text-align: center;">
+                                    <button class="btn-add-mayorista" onclick="event.stopPropagation(); addToCart('${p.id}')">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `</tbody></table>`;
+                    mayoristaList.innerHTML = html;
+                }
+                return;
+            }
+
+            // Si NO es Mayorista, mostrar grid normal
+            grid.style.display = 'grid';
+            mayoristaContainer.classList.remove('active');
+
+            const filtered = products.filter(p => 
+                (currentCat === 'Todos' || p.categoria === currentCat) && 
+                p.nombre.toLowerCase().includes(query)
+            );
 
             grid.innerHTML = filtered.map(p => `
                 <div class="product-card" onclick="openDetail('${p.id}')">
@@ -283,7 +454,6 @@
 
         function closeDetail() { 
             document.getElementById('detail-modal').style.display = 'none';
-            // Limpiar la URL sin recargar para que el ID no quede pegado
             const url = new URL(window.location);
             url.searchParams.delete('id');
             window.history.replaceState({}, '', url);
@@ -292,7 +462,6 @@
         function shareProduct(e, id) {
             e.stopPropagation();
             const p = products.find(i => i.id === id);
-            // GENERAR LINK ESPECIFICO CON EL ID
             const shareUrl = window.location.origin + window.location.pathname + '?id=' + p.id;
             const text = `🥩 *${p.nombre}*\n💰 $${p.precio.toLocaleString()} /${p.unidad}\nMira este producto acá:`;
             
@@ -306,36 +475,85 @@
 
         function addToCart(id) {
             const p = products.find(i => i.id === id);
+            if (!p) return;
             const exist = cart.find(i => i.id === id);
-            if(exist) exist.qty++; else cart.push({...p, qty: 1});
+            if(exist) {
+                exist.qty++;
+            } else {
+                cart.push({...p, qty: 1});
+            }
             updateCart();
+            // Feedback visual
+            const btn = document.querySelector(`[onclick*="addToCart('${id}')"]`);
+            if (btn) {
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                btn.style.background = '#00AEEF';
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.style.background = '';
+                }, 800);
+            }
         }
 
         function updateCart() {
             const list = document.getElementById('cart-list');
             let total = 0;
-            list.innerHTML = cart.map(item => {
-                total += item.precio * item.qty;
-                return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
-                        <div style="flex:1"><b>${item.nombre}</b><br><small style="color:var(--primary);">$${item.precio.toLocaleString()} x ${item.qty} ${item.unidad}</small></div>
-                        <button onclick="remove('${item.id}')" style="background:none; border:none; color:#ff4757; cursor:pointer;"><i class="fas fa-trash-alt"></i></button></div>`;
-            }).join('');
+            if (cart.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:#999; padding:40px 0;">Tu carrito está vacío</p>';
+            } else {
+                list.innerHTML = cart.map(item => {
+                    total += item.precio * item.qty;
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
+                            <div style="flex:1">
+                                <b>${item.nombre}</b>
+                                <br>
+                                <small style="color:var(--primary);">$${item.precio.toLocaleString()} x ${item.qty} ${item.unidad}</small>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <button onclick="changeQty('${item.id}', -1)" style="background:#f0f0f0; border:none; width:30px; height:30px; border-radius:8px; cursor:pointer; font-weight:700;">-</button>
+                                <span style="font-weight:700; min-width:20px; text-align:center;">${item.qty}</span>
+                                <button onclick="changeQty('${item.id}', 1)" style="background:#f0f0f0; border:none; width:30px; height:30px; border-radius:8px; cursor:pointer; font-weight:700;">+</button>
+                                <button onclick="remove('${item.id}')" style="background:none; border:none; color:#ff4757; cursor:pointer; margin-left:5px;"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </div>`;
+                }).join('');
+            }
             document.getElementById('total-price').innerText = `$${total.toLocaleString()}`;
             document.getElementById('cart-count').innerText = cart.reduce((acc, i) => acc + i.qty, 0);
         }
 
-        function remove(id) { cart = cart.filter(i => i.id !== id); updateCart(); }
+        function changeQty(id, delta) {
+            const item = cart.find(i => i.id === id);
+            if (!item) return;
+            item.qty += delta;
+            if (item.qty <= 0) {
+                cart = cart.filter(i => i.id !== id);
+            }
+            updateCart();
+        }
+
+        function remove(id) { 
+            cart = cart.filter(i => i.id !== id); 
+            updateCart(); 
+        }
 
         function sendOrder() {
             const name = document.getElementById('cust-name').value.trim();
-            if(!name || cart.length === 0) return alert("Completá tus datos.");
+            if(!name) return alert("Por favor, completá tu nombre.");
+            if(cart.length === 0) return alert("El carrito está vacío.");
+            
             let msg = `*NUEVO PEDIDO - FRIGORÍFICO 2 DE ABRIL*%0A---------------------------%0A👤 Cliente: ${name}%0A%0A📦 DETALLE:%0A`;
-            cart.forEach(i => msg += `• ${i.nombre} (x${i.qty} ${i.unidad})%0A`);
-            msg += `%0A💰 *TOTAL: ${document.getElementById('total-price').innerText}*`;
+            cart.forEach(i => msg += `• ${i.nombre} (x${i.qty} ${i.unidad}) - $${(i.precio * i.qty).toLocaleString()}%0A`);
+            const total = cart.reduce((acc, i) => acc + (i.precio * i.qty), 0);
+            msg += `%0A💰 *TOTAL: $${total.toLocaleString()}*`;
             window.open(`https://wa.me/5491168705261?text=${msg}`, '_blank');
         }
 
-        function toggleCart() { document.getElementById('cart-sidebar').classList.toggle('active'); }
+        function toggleCart() { 
+            document.getElementById('cart-sidebar').classList.toggle('active'); 
+        }
+
         syncData();
     </script>
 </body>
