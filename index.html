@@ -394,7 +394,12 @@
         }
 
         function renderCats() {
-            const categories = ['Todos', 'Mayorista', ...new Set(products.map(p => p.categoria))];
+            // Obtener todas las categorías de los productos (excepto "mayorista" para evitar duplicado)
+            const categoriasFromData = [...new Set(products.map(p => p.categoria))]
+                .filter(cat => cat.toLowerCase() !== 'mayorista');
+            
+            // Construir el array final: primero "Todos", luego "Mayorista" (destacado), luego las demás
+            const categories = ['Todos', 'Mayorista', ...categoriasFromData];
             
             document.getElementById('cat-container').innerHTML = categories.map(r => {
                 // Si es "Mayorista", le agregamos la clase especial
